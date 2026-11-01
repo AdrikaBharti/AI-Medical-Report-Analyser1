@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Medical Report Analyzer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--tx:#17212b;--mut:#64748b;--bd:#dbe3ee;--pri:#1f6feb;--ok:#16a34a;--bad:#dc2626;--warn:#d97706}
+@media(prefers-color-scheme:dark){:root{--bg:#0e141b;--card:#161e28;--tx:#e6edf5;--mut:#94a3b8;--bd:#2a3644;--pri:#58a6ff;--ok:#3fb950;--bad:#f85149;--warn:#e3b341}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:linear-gradient(135deg,#0b3d91,#1f6feb);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+header h1{font-size:1.15rem;margin:0}header input{padding:5px 8px;border-radius:6px;border:0;width:220px}
+nav{display:flex;gap:4px;overflow-x:auto;padding:6px 16px 0;background:var(--card);border-bottom:1px solid var(--bd)}
+nav button{border:0;background:none;color:var(--mut);padding:10px 14px;cursor:pointer;font:inherit;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{color:var(--pri);border-color:var(--pri);font-weight:600}
+main{max-width:1000px;margin:20px auto;padding:0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{margin:0 0 4px}h3,h4{margin:0}.mut,small{color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:10px}
+.fld{display:flex;flex-direction:column;font-size:.85rem;gap:3px}.fld small{font-size:.7rem}.rq{color:var(--bad)}
+input,select{padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit;min-width:0}
+.pri{background:var(--pri);color:#fff;border:0;border-radius:8px;padding:9px 18px;font:inherit;cursor:pointer;margin-top:12px}
+.sec{background:none;border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit}
+.chip{display:inline-block;background:var(--bg);border:1px solid var(--bd);border-radius:99px;padding:2px 10px;margin:2px;font-size:.8rem}
+.chip.rq{border-color:var(--bad);color:var(--bad)}.chip.ok{border-color:var(--ok);color:var(--ok)}
+.badge{border-radius:99px;padding:3px 12px;font-size:.8rem;font-weight:600;color:#fff;white-space:nowrap}.b-ok{background:var(--ok)}.b-bad{background:var(--bad)}.b-warn{background:var(--warn)}
+.rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.res.pos{border-left:5px solid var(--bad)}.res.neg{border-left:5px solid var(--ok)}
+.meter{position:relative;height:12px;border-radius:6px;background:var(--bd);margin:14px 0 6px}.meter .fill{height:100%;border-radius:6px}
+.pos .fill{background:var(--bad)}.neg .fill{background:var(--ok)}.meter i{position:absolute;top:-4px;width:3px;height:20px;background:var(--tx)}
+.fr{display:grid;grid-template-columns:130px 1fr 90px;gap:8px;align-items:center;font-size:.82rem;margin:3px 0}
+.bar{height:8px;background:var(--bd);border-radius:4px}.bar div{height:100%;border-radius:4px}.up{background:var(--bad)}.dn{background:var(--ok)}
+.err{color:var(--bad);background:rgba(220,38,38,.1);padding:10px;border-radius:8px;margin-bottom:14px}
+pre{overflow:auto;background:var(--bg);padding:10px;border-radius:8px;font-size:.78rem;max-height:300px}
+table{border-collapse:collapse;width:100%;font-size:.82rem}td,th{border-bottom:1px solid var(--bd);padding:5px 8px;text-align:left}.sc{overflow:auto;max-height:340px}
+.cv{height:270px;position:relative}.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+.mrow{display:flex;gap:6px;margin:5px 0}.mrow input{flex:1}
+details{margin:6px 0}summary{cursor:pointer}figure{margin:0 0 10px}img.shap{max-width:100%}
+.score{font-size:2rem;font-weight:700;line-height:1}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bd);border-top-color:var(--pri);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}@keyframes s{to{transform:rotate(360deg)}}
+footer{text-align:center;color:var(--mut);font-size:.78rem;margin:24px 0}
+</style></head><body>
+<header><h1>🩺 AI Medical Report Analyzer</h1>
+<label>API URL <input id="base" placeholder="same server (blank)"></label></header>
+<nav>
+<button data-t="dis" class="on">1 · Diseases</button><button data-t="batch">2 · Batch check</button>
+<button data-t="rep">3 · Analyze report</button><button data-t="pred">4 · Predict disease</button><button data-t="dash">5 · Dashboard</button><button data-t="trend">6 · Trends</button></nav>
+<main><div id="conn"></div>
+
+<section id="t-dis"><div class="card"><h2>Disease lookup</h2><p class="mut">Type a disease name to see its required and all input fields. Leave empty to list every disease.</p>
+<form id="fDis"><input id="dq" list="dl" placeholder="e.g. Heart" style="width:260px"> <button class="pri" style="margin:0">Search</button></form></div>
+<datalist id="dl"></datalist><div id="disOut"></div></section>
+
+<section id="t-batch" hidden><div class="card"><h2>Batch check</h2><p class="mut">Enter whatever values you have. The tags below show which diseases have enough data; submit to run every one that does. <span class="rq">*</span> = required by at least one disease.</p>
+<div id="rd"></div><form id="fBatch"><div class="grid" id="bf"></div><button class="pri">Run all possible predictions</button></form></div><div id="batchOut"></div></section>
+
+<section id="t-rep" hidden><div class="card"><h2>Analyze a lab report</h2>
+<form id="fRep"><div class="grid"><label class="fld">Report file (PDF / PNG / JPG / TIFF)<input type="file" id="rf" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" required></label>
+<label class="fld">Report date (date of the test)<input id="rd8" type="date"></label>
+<label class="fld">Age (optional)<input id="ra" type="number" step="any"></label>
+<label class="fld">Sex (optional)<select id="rs"><option value="">Use report</option><option>male</option><option>female</option></select></label></div>
+<label style="display:block;margin-top:10px;font-size:.85rem"><input type="checkbox" id="sv" checked> Save this report to my history (for trends)</label>
+<h4 style="margin-top:14px">Manual values (optional)</h4><p class="mut" style="margin:0">Things not on the report, e.g. BMI, Pregnancies, cp.</p><div id="mr"></div>
+<datalist id="allf"></datalist><button type="button" class="sec" id="addm">+ Add value</button><br><button class="pri">Analyze report</button></form></div><div id="repOut"></div></section>
+
+<section id="t-pred" hidden><div class="card"><h2>Predict one disease</h2>
+<form id="fPred"><label class="fld" style="max-width:260px">Disease<select id="pd"></select></label><div class="grid" id="pf"></div><button class="pri">Check</button></form></div><div id="predOut"></div></section>
+
+<section id="t-dash" hidden><div class="card"><h2>Dashboard</h2><div id="hl"></div></div>
+<div class="two"><div class="card"><h4>Model quality (out-of-fold ROC-AUC)</h4><div class="cv"><canvas id="cAuc"></canvas></div></div>
+<div class="card" id="lastNote"><h4>Latest results</h4><p class="mut">Run a prediction (tabs 2–4) and the charts for it appear here.</p></div></div>
+<div id="lastCharts" hidden><div class="two"><div class="card"><h4>Risk score vs decision threshold</h4><div class="cv"><canvas id="cRisk"></canvas></div></div>
+<div class="card"><h4>Outcome summary</h4><div class="cv"><canvas id="cDon"></canvas></div></div></div>
+<div class="card"><div class="rh"><h4>Top factors behind the prediction</h4><select id="fsel"></select></div><div class="cv"><canvas id="cFac"></canvas></div></div></div>
+<div class="card"><h4>Feature importance (SHAP, from training)</h4><div class="two" id="shap"></div></div>
+<div class="card"><h4>Model comparison results</h4><div id="cmp" class="sc"></div></div></section>
+
+<section id="t-trend" hidden>
+<div class="card"><div class="rh"><h2>Trends over time</h2><button class="sec" id="wipe">Delete my history</button></div>
+<p class="mut">Each analysed report you choose to save is stored on this server under an anonymous ID kept in this browser. Use the report date field in tab 3 so points land on the right day.</p></div>
+<div id="trendOut"></div></section>
+
+<footer>Screening aid only — not a medical diagnosis. Please consult a qualified physician.</footer></main>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let API=location.protocol.startsWith('http')?'':'http://127.0.0.1:8000',DIS=null,BM={},LAST={},NSK=0;
+/* anonymous profile id, kept in this browser; links saved reports together for trends */
+const PID=localStorage.getItem('pid')||(()=>{const p=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2,12));localStorage.setItem('pid',p);return p})();
+async function api(p,o){const r=await fetch(API+p,o);let j=null;try{j=await r.json()}catch{}
+ if(!r.ok){const d=j&&j.detail;throw new Error(typeof d==='string'?d:JSON.stringify(d||r.statusText))}return j}
+const post=(p,b)=>api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+const diseases=async()=>DIS||(DIS=await api('/diseases'));
+async function run(el,fn){el.innerHTML='<span class="spin"></span> Working…';try{el.innerHTML=await fn()}catch(e){el.innerHTML=`<div class="err">⚠ ${esc(e.message)}</div>`}}
+function show(t){$$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$$('section').forEach(s=>s.hidden=s.id!=='t-'+t);if(t==='dash')dash();if(t==='trend')trendTab()}
+$$('nav button').forEach(b=>b.onclick=()=>show(b.dataset.t));
+
+/* ---------- field widgets ---------- */
+const SEL={Gender:[['1','Male'],['0','Female']],fbs:[['0','No (≤120 mg/dl)'],['1','Yes (>120 mg/dl)']],exang:[['0','No'],['1','Yes']],
+ rbc:[['0','Normal'],['1','Abnormal']],pc:[['0','Normal'],['1','Abnormal']],pcc:[['0','Not present'],['1','Present']],ba:[['0','Not present'],['1','Present']],
+ cp:[['typical angina','Typical angina'],['atypical angina','Atypical angina'],['non-anginal','Non-anginal pain'],['asymptomatic','Asymptomatic']],
+ restecg:[['normal','Normal'],['st-t abnormality','ST-T abnormality'],['lv hypertrophy','LV hypertrophy']]};
+function fieldHTML(f,req,tag){const o=SEL[f];
+ const i=o?`<select data-f="${f}"><option value="">—</option>${o.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`:`<input data-f="${f}" type="number" step="any" placeholder="${req?'required':'optional'}">`;
+ return`<label class="fld"><span>${f}${req?' <b class="rq">*</b>':''}</span>${i}${tag?`<small>${esc(tag)}</small>`:''}</label>`}
+function collect(root){const v={};root.querySelectorAll('[data-f]').forEach(e=>{const t=e.value.trim();if(t==='')return;v[e.dataset.f]=isNaN(Number(t))?t:Number(t)});return v}
+const val=t=>{t=t.trim();return isNaN(Number(t))?t:Number(t)};
+
+/* ---------- result rendering ---------- */
+function card(p){const pc=(p.probability*100).toFixed(1),th=(p.threshold_used*100).toFixed(1),mx=Math.max(...p.top_factors.map(f=>Math.abs(f.contribution)),1e-9);
+ return`<div class="card res ${p.prediction?'pos':'neg'}"><div class="rh"><h3>${esc(p.disease)}</h3><span class="badge ${p.prediction?'b-bad':'b-ok'}">${esc(p.label)}</span></div>
+ <div class="meter"><div class="fill" style="width:${pc}%"></div><i style="left:${th}%" title="decision threshold"></i></div>
+ <p class="mut">Risk score <b>${pc}%</b> · decision threshold ${th}% (black marker) · data completeness: <b>${esc(p.data_completeness)}</b></p>
+ ${p.top_factors.map(f=>`<div class="fr"><span>${esc(f.feature)}</span><div class="bar"><div class="${f.contribution>0?'up':'dn'}" style="width:${Math.abs(f.contribution)/mx*100}%"></div></div><small>${esc(f.direction)}</small></div>`).join('')}
+ ${p.fields_missing.length?`<p class="mut">Not supplied (training median used): ${p.fields_missing.map(esc).join(', ')}</p>`:''}</div>`}
+function summary(res,sk){return`<div class="card"><h3>Which diseases could be predicted?</h3>`+Object.keys(res).map(n=>sk[n]?`<p><span class="badge b-warn">Skipped</span> <b>${esc(n)}</b> — ${esc(sk[n])}</p>`:`<p><span class="badge b-ok">Predicted</span> <b>${esc(n)}</b></p>`).join('')+'</div>'}
+function setLast(res,sk){LAST=Object.fromEntries(Object.entries(res).filter(([,v])=>v));NSK=Object.keys(sk||{}).length}
+function view(v){if(Array.isArray(v)&&v.length&&typeof v[0]==='object'&&v[0]){const c=[...new Set(v.flatMap(Object.keys))];
+ return`<div class="sc"><table><tr>${c.map(x=>`<th>${esc(x)}</th>`).join('')}</tr>${v.map(r=>`<tr>${c.map(x=>`<td>${esc(typeof r[x]==='object'?JSON.stringify(r[x]):r[x])}</td>`).join('')}</tr>`).join('')}</table></div>`}
+ return`<pre>${esc(JSON.stringify(v,null,2))}</pre>`}
+
+/* NEW: urgent notice, health score, plain-language explanation, follow-up tests */
+function extras(a){let h='';const ex=a.explanation,s=a.health_score;
+ if(ex&&ex.urgent_notice)h+=`<div class="err"><b>⚠ ${esc(ex.urgent_notice)}</b></div>`;
+ if(s&&s.score!=null)h+=`<div class="card"><div class="rh"><div><div class="score">${s.score}<small>/100</small></div><small>Health score</small></div><span class="badge ${s.score>=80?'b-ok':s.score>=60?'b-warn':'b-bad'}">${esc(s.band)}</span></div>
+  <p class="mut" style="margin:8px 0 2px">${s.lowering_factors&&s.lowering_factors.length?'Lowered by: '+s.lowering_factors.map(esc).join(', '):'No out-of-range values.'}</p><small>${esc(s.note)}</small></div>`;
+ if(ex&&ex.text)h+=`<div class="card"><h3>What this means</h3><p>${esc(ex.text)}</p><small class="mut">${ex.source==='llm'?'AI-generated explanation':'Standard explanation'} — not medical advice.</small></div>`;
+ if(a.followups&&a.followups.length)h+=`<div class="card"><h3>Suggested follow-up tests</h3>${a.followups.map(f=>`<p><b>${esc(f.test)}</b>${f.suggested_after?` — around ${esc(f.suggested_after)}`:''}<br><small class="mut">${esc(f.guidance)}</small></p>`).join('')}<small class="mut">General information only; your doctor decides the right timing.</small></div>`;
+ return h}
+
+/* ---------- 1. diseases ---------- */
+$('#fDis').onsubmit=e=>{e.preventDefault();run($('#disOut'),async()=>{DIS=null;const d=await diseases(),q=$('#dq').value.trim().toLowerCase(),n=Object.keys(d).filter(k=>k.toLowerCase().includes(q));
+ if(!n.length)return`<div class="err">No disease matches “${esc(q)}”. Available: ${Object.keys(d).map(esc).join(', ')}</div>`;
+ return n.map(k=>{const x=d[k];return`<div class="card"><div class="rh"><h3>${esc(k)}</h3><button class="sec" onclick="useDisease('${k}')">Predict this →</button></div>
+ <p class="mut">${esc(x.source)}<br>Model AUC ${x.oof_roc_auc.toFixed(3)} · decision threshold ${x.threshold.toFixed(3)}</p>
+ <b>Required fields</b><div>${x.required_fields.map(f=>`<span class="chip rq">${esc(f)}</span>`).join('')}</div>
+ <b>All fields (${x.all_fields.length})</b> <small>required in red</small><div>${x.all_fields.map(f=>`<span class="chip ${x.required_fields.includes(f)?'rq':''}">${esc(f)}</span>`).join('')}</div></div>`}).join('')})};
+function useDisease(n){show('pred');$('#pd').value=n;pdFields()}
+
+/* ---------- 2. batch ---------- */
+function buildBatch(d){BM={};Object.entries(d).forEach(([n,x])=>x.all_fields.forEach(f=>{const k=f.toLowerCase(),g=BM[k]=BM[k]||{names:new Set(),use:[],req:0};g.names.add(f);g.use.push(n);if(x.required_fields.includes(f))g.req++}));
+ $('#bf').innerHTML=Object.values(BM).map(g=>fieldHTML([...g.names][0],g.req,'used by: '+g.use.join(', '))).join('')}
+function spread(v){const o={};Object.values(BM).forEach(g=>{const k=[...g.names][0];if(v[k]!==undefined)g.names.forEach(n=>o[n]=v[k])});return o}  // 'Age' and 'age' get the same value
+function ready(){if(!DIS)return;const v=spread(collect($('#bf')));$('#rd').innerHTML=Object.entries(DIS).map(([n,x])=>{const m=x.required_fields.filter(f=>v[f]===undefined);
+ return`<span class="chip ${m.length?'':'ok'}">${m.length?'✗':'✓'} ${esc(n)}${m.length?' needs '+m.map(esc).join(', '):''}</span>`}).join('')}
+$('#bf').oninput=ready;
+$('#fBatch').onsubmit=e=>{e.preventDefault();run($('#batchOut'),async()=>{const r=await post('/predict/batch',spread(collect($('#bf'))));setLast(r.results,r.skipped);
+ return summary(r.results,r.skipped)+Object.values(r.results).filter(Boolean).map(card).join('')})};
+
+/* ---------- 3. analyze report ---------- */
+function addRow(){const d=document.createElement('div');d.className='mrow';d.innerHTML='<input list="allf" placeholder="field, e.g. BMI"><input placeholder="value"><button type="button" class="sec" onclick="this.parentNode.remove()">✕</button>';$('#mr').appendChild(d)}
+$('#addm').onclick=addRow;addRow();
+$('#fRep').onsubmit=e=>{e.preventDefault();run($('#repOut'),async()=>{const fd=new FormData();fd.append('file',$('#rf').files[0]);
+ fd.append('profile_id',PID);fd.append('save',$('#sv').checked?'true':'false');
+ if($('#rd8').value)fd.append('report_date',$('#rd8').value);
+ if($('#ra').value)fd.append('age',$('#ra').value);if($('#rs').value)fd.append('sex',$('#rs').value);
+ const man={};$$('#mr .mrow').forEach(r=>{const[k,v]=r.querySelectorAll('input');if(k.value.trim()&&v.value.trim())man[k.value.trim()]=val(v.value)});
+ if(Object.keys(man).length)fd.append('manual_values',JSON.stringify(man));
+ const a=await api('/analyze-report',{method:'POST',body:fd});setLast(a.predictions,a.skipped_diseases);
+ const known=['predictions','skipped_diseases','explanation','disclaimer','model_inputs','health_score','followups','report_date','saved_report_id'];
+ return extras(a)+summary(a.predictions,a.skipped_diseases||{})+Object.values(a.predictions).filter(Boolean).map(card).join('')
+  +(a.saved_report_id?`<p class="mut">Saved to your history — see the Trends tab.</p>`:'')
+  +(a.model_inputs?`<details class="card"><summary><b>Values sent to the models</b></summary>${view(Object.entries(a.model_inputs).map(([k,v])=>({field:k,value:v})))}</details>`:'')
+  +Object.entries(a).filter(([k])=>!known.includes(k)).map(([k,v])=>`<details class="card" open><summary><b>${esc(k)}</b></summary>${view(v)}</details>`).join('')})};
+
+/* ---------- 4. predict one disease ---------- */
+function pdFields(){const x=DIS&&DIS[$('#pd').value];if(x)$('#pf').innerHTML=x.all_fields.map(f=>fieldHTML(f,x.required_fields.includes(f))).join('')}
+$('#pd').onchange=pdFields;
+$('#fPred').onsubmit=e=>{e.preventDefault();run($('#predOut'),async()=>{const p=await post('/predict/'+encodeURIComponent($('#pd').value),collect($('#pf')));setLast({[p.disease]:p},{});return card(p)})};
+
+/* ---------- 5. dashboard ---------- */
+const CH={};function chart(id,c){CH[id]&&CH[id].destroy();c.options={responsive:true,maintainAspectRatio:false,...c.options};CH[id]=new Chart($('#'+id),c)}
+function factors(){const p=LAST[$('#fsel').value];if(!p)return;chart('cFac',{type:'bar',data:{labels:p.top_factors.map(f=>f.feature),datasets:[{label:'Contribution to risk (SHAP)',data:p.top_factors.map(f=>f.contribution),backgroundColor:p.top_factors.map(f=>f.contribution>0?'#dc2626':'#16a34a')}]},options:{indexAxis:'y'}})}
+$('#fsel').onchange=factors;
+async function dash(){const hl=$('#hl');
+ try{const h=await api('/health');hl.innerHTML=`<span class="badge b-ok">API ${esc(h.status)}</span> models loaded: `+h.models_loaded.map(m=>`<span class="chip">${esc(m)}</span>`).join('')}
+ catch(e){hl.innerHTML=`<span class="badge b-bad">API unreachable</span> ${esc(e.message)}`;return}
+ Chart.defaults.color=getComputedStyle(document.body).getPropertyValue('--mut');
+ const d=await diseases(),n=Object.keys(d),L=Object.values(LAST);
+ chart('cAuc',{type:'bar',data:{labels:n,datasets:[{label:'ROC-AUC',data:n.map(k=>d[k].oof_roc_auc),backgroundColor:'#1f6feb'}]},options:{scales:{y:{min:0,max:1}}}});
+ $('#lastNote').hidden=!!L.length;$('#lastCharts').hidden=!L.length;
+ if(L.length){const ind=L.filter(p=>p.prediction).length;
+  chart('cRisk',{type:'bar',data:{labels:L.map(p=>p.disease),datasets:[{label:'Risk score %',data:L.map(p=>+(p.probability*100).toFixed(1)),backgroundColor:L.map(p=>p.prediction?'#dc2626':'#16a34a')},{label:'Threshold %',data:L.map(p=>+(p.threshold_used*100).toFixed(1)),backgroundColor:'#94a3b8'}]},options:{scales:{y:{min:0,max:100}}}});
+  chart('cDon',{type:'doughnut',data:{labels:['Indicated','Not indicated','Skipped (not enough data)'],datasets:[{data:[ind,L.length-ind,NSK],backgroundColor:['#dc2626','#16a34a','#94a3b8']}]}});
+  $('#fsel').innerHTML=L.map(p=>`<option>${esc(p.disease)}</option>`).join('');factors()}
+ $('#shap').innerHTML=n.map(k=>`<figure><figcaption><b>${esc(k)}</b></figcaption><img class="shap" src="${API}/plots/shap_best/${k.toLowerCase()}_importance.png" onerror="this.closest('figure').remove()"></figure>`).join('');
+ try{const c=await api('/comparison');$('#cmp').innerHTML=c.summary.length?view(c.summary):'<p class="mut">No comparison CSV found.</p>'}catch{}}
+
+/* ---------- 6. trends (NEW) ---------- */
+async function trendTab(){const out=$('#trendOut');out.innerHTML='<span class="spin"></span> Loading…';
+ try{const t=await api('/trends/'+encodeURIComponent(PID));
+  if(!t.n_reports){out.innerHTML='<div class="card mut">No saved reports yet. Analyse a report in tab 3 (with “Save” ticked) to start tracking.</div>';return}
+  Chart.defaults.color=getComputedStyle(document.body).getPropertyValue('--mut');
+  const blocks=[];
+  if(t.health_score.length)blocks.push(['Health score',t.health_score,'/100']);
+  Object.entries(t.series).forEach(([k,v])=>blocks.push([k,v,v[0].unit||'']));
+  if(!blocks.length){out.innerHTML='<div class="card mut">Saved reports contain no trackable values yet.</div>';return}
+  out.innerHTML=`<p class="mut">${t.n_reports} saved report${t.n_reports>1?'s':''}. Dashed lines show the reference range. A chart with one point needs a second report to show a trend.</p><div class="two">`
+   +blocks.map((b,i)=>`<div class="card"><h4>${esc(b[0])} ${b[2]?'('+esc(b[2])+')':''}</h4>${b[1][0].test?`<small>Test used: ${esc(b[1][0].test)}</small>`:''}<div class="cv"><canvas id="tc${i}"></canvas></div></div>`).join('')+'</div>';
+  blocks.forEach(([name,pts],i)=>{const ds=[{label:name,data:pts.map(p=>p.value),borderColor:'#1f6feb',backgroundColor:'#1f6feb',tension:.25}];
+   const r=pts[0].range;
+   if(r){if(r[0]!=null)ds.push({label:'Low limit',data:pts.map(()=>r[0]),borderDash:[5,5],borderColor:'#94a3b8',pointRadius:0});
+    if(r[1]!=null)ds.push({label:'High limit',data:pts.map(()=>r[1]),borderDash:[5,5],borderColor:'#94a3b8',pointRadius:0})}
+   chart('tc'+i,{type:'line',data:{labels:pts.map(p=>p.date),datasets:ds}})})
+ }catch(e){out.innerHTML=`<div class="err">⚠ ${esc(e.message)}</div>`}}
+$('#wipe').onclick=async()=>{if(confirm('Delete all saved reports for this browser?')){try{await api('/history/'+encodeURIComponent(PID),{method:'DELETE'});trendTab()}catch(e){$('#trendOut').innerHTML=`<div class="err">⚠ ${esc(e.message)}</div>`}}};
+
+/* ---------- boot ---------- */
+async function init(){$('#conn').innerHTML='';DIS=null;
+ try{const d=await diseases(),n=Object.keys(d);
+  $('#dl').innerHTML=n.map(k=>`<option value="${esc(k)}">`).join('');
+  $('#pd').innerHTML=n.map(k=>`<option>${esc(k)}</option>`).join('');
+  $('#allf').innerHTML=[...new Set(n.flatMap(k=>d[k].all_fields))].map(f=>`<option value="${esc(f)}">`).join('');
+  pdFields();buildBatch(d);ready()}
+ catch(e){$('#conn').innerHTML=`<div class="err">Cannot reach the API at ${esc(API||location.origin)} — ${esc(e.message)}.<br>Start it with <code>uvicorn app:app --port 8000</code> or set the API URL (top right).</div>`}}
+$('#base').value=API;$('#base').onchange=e=>{API=e.target.value.trim().replace(/\/$/,'');init()};
+$('#rd8').value=new Date().toISOString().slice(0,10);
+init();
+</script></body></html>

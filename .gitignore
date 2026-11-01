@@ -1,0 +1,6 @@
+.venv/
+documentation/
+external_datasets/
+outputs/
+history.db
+Important inputs.txt
